@@ -33,7 +33,7 @@ import org.sleuthkit.datamodel.Directory;
  * the children filter so that files and such are hidden from the tree. 
  *
  */
-class DirectoryTreeFilterNode extends FilterNode {
+public class DirectoryTreeFilterNode extends FilterNode {
 
     private static final Action collapseAll = new CollapseAction("Collapse All");
 
