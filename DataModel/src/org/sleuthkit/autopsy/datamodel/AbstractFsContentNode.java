@@ -18,10 +18,21 @@
  */
 package org.sleuthkit.autopsy.datamodel;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TimeZone;
 import org.openide.nodes.Sheet;
+import org.sleuthkit.datamodel.ContentVisitor;
+import org.sleuthkit.datamodel.Directory;
+import org.sleuthkit.datamodel.File;
+import org.sleuthkit.datamodel.FileSystem;
+import org.sleuthkit.datamodel.FileSystemParent;
 import org.sleuthkit.datamodel.FsContent;
+import org.sleuthkit.datamodel.Image;
+import org.sleuthkit.datamodel.Volume;
+import org.sleuthkit.datamodel.VolumeSystem;
 
 /**
  * Abstract class that implements the commonality between File and Directory
@@ -30,6 +41,7 @@ import org.sleuthkit.datamodel.FsContent;
 public abstract class AbstractFsContentNode<T extends FsContent> extends AbstractContentNode<T> {
 
     // Note: this order matters for the search result, changed it if the order of property headers on the "KeywordSearchNode"changed
+    private static SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public static enum FsContentPropertyType {
 
@@ -213,12 +225,18 @@ public abstract class AbstractFsContentNode<T extends FsContent> extends Abstrac
      * @param content to extract properties from
      */
     public static void fillPropertyMap(Map<String, Object> map, FsContent content) {
+        TimeZone tz = TimeZone.getTimeZone(content.accept(new GetImageVisitor()).getTimeZone());
+        dateFormatter.setTimeZone(tz);
         map.put(FsContentPropertyType.NAME.toString(), content.getName());
         map.put(FsContentPropertyType.LOCATION.toString(), DataConversion.getformattedPath(ContentUtils.getDisplayPath(content), 0, 1));
-        map.put(FsContentPropertyType.MOD_TIME.toString(), content.getMtimeAsDate());
-        map.put(FsContentPropertyType.CHANGED_TIME.toString(), content.getCtimeAsDate());
-        map.put(FsContentPropertyType.ACCESS_TIME.toString(), content.getAtimeAsDate());
-        map.put(FsContentPropertyType.CREATED_TIME.toString(), content.getCrtimeAsDate());
+//        map.put(FsContentPropertyType.MOD_TIME.toString(), content.getMtimeAsDate());
+//        map.put(FsContentPropertyType.CHANGED_TIME.toString(), content.getCtimeAsDate());
+//        map.put(FsContentPropertyType.ACCESS_TIME.toString(), content.getAtimeAsDate());
+//        map.put(FsContentPropertyType.CREATED_TIME.toString(), content.getCrtimeAsDate());
+        map.put(FsContentPropertyType.MOD_TIME.toString(),  dateFormatter.format(new Date(content.getMtime()*1000)));
+        map.put(FsContentPropertyType.CHANGED_TIME.toString(), dateFormatter.format(new Date(content.getCtime()*1000)));
+        map.put(FsContentPropertyType.ACCESS_TIME.toString(), dateFormatter.format(new Date(content.getAtime()*1000)));
+        map.put(FsContentPropertyType.CREATED_TIME.toString(), dateFormatter.format(new Date(content.getCrtime()*1000)));
         map.put(FsContentPropertyType.SIZE.toString(), content.getSize());
         map.put(FsContentPropertyType.FLAGS_DIR.toString(), content.getDirFlagsAsString());
         map.put(FsContentPropertyType.FLAGS_META.toString(), content.getMetaFlagsAsString());
@@ -230,5 +248,42 @@ public abstract class AbstractFsContentNode<T extends FsContent> extends Abstrac
         map.put(FsContentPropertyType.TYPE_DIR.toString(), content.getDirTypeAsString());
         map.put(FsContentPropertyType.TYPE_META.toString(), content.getMetaTypeAsString());
         map.put(FsContentPropertyType.KNOWN.toString(), content.getKnown().getName());
+    }
+    
+    private static class GetImageVisitor implements ContentVisitor<Image> {
+
+        @Override
+        public Image visit(Directory drctr) {
+            return visit(drctr.getFileSystem());
+        }
+
+        @Override
+        public Image visit(File file) {
+            return visit(file.getFileSystem());
+        }
+
+        @Override
+        public Image visit(FileSystem fs) {
+            FileSystemParent fsp = fs.getParent();
+            if(fsp instanceof Image)
+                return (Image) fsp;
+            else
+                return visit((Volume)fsp);
+        }
+
+        @Override
+        public Image visit(Image image) {
+            return image;
+        }
+
+        @Override
+        public Image visit(Volume volume) {
+            return visit(volume.getParent());
+        }
+
+        @Override
+        public Image visit(VolumeSystem vs) {
+            return vs.getParent();
+        }
     }
 }

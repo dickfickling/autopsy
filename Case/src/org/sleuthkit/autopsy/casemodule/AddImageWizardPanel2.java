@@ -265,7 +265,7 @@ class AddImageWizardPanel2 implements WizardDescriptor.Panel<WizardDescriptor> {
                 }
             });
             try {
-                process = currentCase.makeAddImageProcess(Case.convertTimeZone(timeZone));
+                process = currentCase.makeAddImageProcess(timeZone);
                 cancelledWhileRunning.enable();
                 process.run(imgPaths);
             } catch (TskException ex) {

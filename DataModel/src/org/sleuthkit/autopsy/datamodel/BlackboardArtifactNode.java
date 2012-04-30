@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openide.nodes.AbstractNode;
@@ -35,12 +36,17 @@ import org.sleuthkit.datamodel.BlackboardArtifact;
 import org.sleuthkit.datamodel.BlackboardAttribute;
 import org.sleuthkit.datamodel.BlackboardAttribute.ATTRIBUTE_TYPE;
 import org.sleuthkit.datamodel.Content;
+import org.sleuthkit.datamodel.ContentVisitor;
 import org.sleuthkit.datamodel.Directory;
 import org.sleuthkit.datamodel.File;
+import org.sleuthkit.datamodel.FileSystem;
+import org.sleuthkit.datamodel.FileSystemParent;
 import org.sleuthkit.datamodel.Image;
 import org.sleuthkit.datamodel.SleuthkitItemVisitor;
 import org.sleuthkit.datamodel.SleuthkitVisitableItem;
 import org.sleuthkit.datamodel.TskException;
+import org.sleuthkit.datamodel.Volume;
+import org.sleuthkit.datamodel.VolumeSystem;
 
 /**
  *
@@ -52,7 +58,7 @@ public class BlackboardArtifactNode extends AbstractNode implements DisplayableI
     Content associated;
     static final Logger logger = Logger.getLogger(BlackboardArtifactNode.class.getName());
     
-    private static final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");;
+    private static SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public BlackboardArtifactNode(BlackboardArtifact artifact) {
         super(Children.LEAF, getLookups(artifact));
@@ -115,6 +121,7 @@ public class BlackboardArtifactNode extends AbstractNode implements DisplayableI
                     case LONG:
                         if(attribute.getAttributeTypeID() == ATTRIBUTE_TYPE.TSK_DATETIME.getTypeID() ||
                                 attribute.getAttributeTypeID() == ATTRIBUTE_TYPE.TSK_LAST_ACCESSED.getTypeID()) {
+                            dateFormatter.setTimeZone(getTimeZone(artifact));
                             map.put(attribute.getAttributeTypeID(), dateFormatter.format(new Date(attribute.getValueLong())));
                         } else
                             map.put(attribute.getAttributeTypeID(), attribute.getValueLong());
@@ -130,6 +137,10 @@ public class BlackboardArtifactNode extends AbstractNode implements DisplayableI
         } catch (TskException ex) {
             logger.log(Level.SEVERE, "Getting attributes failed", ex);
         }
+    }
+    
+    private static TimeZone getTimeZone(BlackboardArtifact artifact) {
+        return TimeZone.getTimeZone(getAssociatedContent(artifact).accept(new GetImageVisitor()).getTimeZone());
     }
 
     @Override
@@ -184,6 +195,43 @@ public class BlackboardArtifactNode extends AbstractNode implements DisplayableI
             logger.log(Level.WARNING, "Failed to retrieve Blackboard Attributes", ex);
         }
         return null;
+    }
+    
+    private static class GetImageVisitor implements ContentVisitor<Image> {
+
+        @Override
+        public Image visit(Directory drctr) {
+            return visit(drctr.getFileSystem());
+        }
+
+        @Override
+        public Image visit(File file) {
+            return visit(file.getFileSystem());
+        }
+
+        @Override
+        public Image visit(FileSystem fs) {
+            FileSystemParent fsp = fs.getParent();
+            if(fsp instanceof Image)
+                return (Image) fsp;
+            else
+                return visit((Volume)fsp);
+        }
+
+        @Override
+        public Image visit(Image image) {
+            return image;
+        }
+
+        @Override
+        public Image visit(Volume volume) {
+            return visit(volume.getParent());
+        }
+
+        @Override
+        public Image visit(VolumeSystem vs) {
+            return vs.getParent();
+        }
     }
     
     private class NameVisitor extends SleuthkitItemVisitor.Default<String> {
