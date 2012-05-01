@@ -19,13 +19,10 @@
 package org.sleuthkit.autopsy.datamodel;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.logging.Logger;
 import org.openide.nodes.Sheet;
-import org.sleuthkit.autopsy.coreutils.Log;
 import org.sleuthkit.datamodel.ContentVisitor;
 import org.sleuthkit.datamodel.Directory;
 import org.sleuthkit.datamodel.File;
@@ -227,8 +224,7 @@ public abstract class AbstractFsContentNode<T extends FsContent> extends Abstrac
      * @param content to extract properties from
      */
     public static void fillPropertyMap(Map<String, Object> map, FsContent content) {
-        TimeZone tz = TimeZone.getTimeZone(content.accept(new GetImageVisitor()).getTimeZone());
-        dateFormatter.setTimeZone(tz);
+        dateFormatter.setTimeZone(content.accept(new GetTimeZoneVisitor()));
         map.put(FsContentPropertyType.NAME.toString(), content.getName());
         map.put(FsContentPropertyType.LOCATION.toString(), DataConversion.getformattedPath(ContentUtils.getDisplayPath(content), 0, 1));
         map.put(FsContentPropertyType.MOD_TIME.toString(),  epochToString(content.getMtime()));
@@ -256,40 +252,40 @@ public abstract class AbstractFsContentNode<T extends FsContent> extends Abstrac
         return time;
     }
 
-    private static class GetImageVisitor implements ContentVisitor<Image> {
+    private static class GetTimeZoneVisitor implements ContentVisitor<TimeZone> {
 
         @Override
-        public Image visit(Directory drctr) {
+        public TimeZone visit(Directory drctr) {
             return visit(drctr.getFileSystem());
         }
 
         @Override
-        public Image visit(File file) {
+        public TimeZone visit(File file) {
             return visit(file.getFileSystem());
         }
 
         @Override
-        public Image visit(FileSystem fs) {
+        public TimeZone visit(FileSystem fs) {
             FileSystemParent fsp = fs.getParent();
             if(fsp instanceof Image)
-                return (Image) fsp;
+                return TimeZone.getTimeZone(((Image) fsp).getTimeZone());
             else
                 return visit((Volume)fsp);
         }
 
         @Override
-        public Image visit(Image image) {
-            return image;
+        public TimeZone visit(Image image) {
+            return TimeZone.getTimeZone(image.getTimeZone());
         }
 
         @Override
-        public Image visit(Volume volume) {
+        public TimeZone visit(Volume volume) {
             return visit(volume.getParent());
         }
 
         @Override
-        public Image visit(VolumeSystem vs) {
-            return vs.getParent();
+        public TimeZone visit(VolumeSystem vs) {
+            return TimeZone.getTimeZone(vs.getParent().getTimeZone());
         }
     }
 }
