@@ -145,7 +145,7 @@ public class BlackboardArtifactNode extends AbstractNode implements DisplayableI
     }
     
     private static TimeZone getTimeZone(BlackboardArtifact artifact) {
-        return TimeZone.getTimeZone(getAssociatedContent(artifact).accept(new GetImageVisitor()).getTimeZone());
+        return getAssociatedContent(artifact).accept(new GetTimeZoneVisitor());
     }
 
     @Override
@@ -202,40 +202,40 @@ public class BlackboardArtifactNode extends AbstractNode implements DisplayableI
         return null;
     }
     
-    private static class GetImageVisitor implements ContentVisitor<Image> {
+    private static class GetTimeZoneVisitor implements ContentVisitor<TimeZone> {
 
         @Override
-        public Image visit(Directory drctr) {
+        public TimeZone visit(Directory drctr) {
             return visit(drctr.getFileSystem());
         }
 
         @Override
-        public Image visit(File file) {
+        public TimeZone visit(File file) {
             return visit(file.getFileSystem());
         }
 
         @Override
-        public Image visit(FileSystem fs) {
+        public TimeZone visit(FileSystem fs) {
             FileSystemParent fsp = fs.getParent();
             if(fsp instanceof Image)
-                return (Image) fsp;
+                return TimeZone.getTimeZone(((Image) fsp).getTimeZone());
             else
                 return visit((Volume)fsp);
         }
 
         @Override
-        public Image visit(Image image) {
-            return image;
+        public TimeZone visit(Image image) {
+            return TimeZone.getTimeZone(image.getTimeZone());
         }
 
         @Override
-        public Image visit(Volume volume) {
+        public TimeZone visit(Volume volume) {
             return visit(volume.getParent());
         }
 
         @Override
-        public Image visit(VolumeSystem vs) {
-            return vs.getParent();
+        public TimeZone visit(VolumeSystem vs) {
+            return TimeZone.getTimeZone(vs.getParent().getTimeZone());
         }
     }
     
