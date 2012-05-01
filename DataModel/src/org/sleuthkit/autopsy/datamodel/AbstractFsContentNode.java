@@ -23,7 +23,9 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.logging.Logger;
 import org.openide.nodes.Sheet;
+import org.sleuthkit.autopsy.coreutils.Log;
 import org.sleuthkit.datamodel.ContentVisitor;
 import org.sleuthkit.datamodel.Directory;
 import org.sleuthkit.datamodel.File;
@@ -41,7 +43,7 @@ import org.sleuthkit.datamodel.VolumeSystem;
 public abstract class AbstractFsContentNode<T extends FsContent> extends AbstractContentNode<T> {
 
     // Note: this order matters for the search result, changed it if the order of property headers on the "KeywordSearchNode"changed
-    private static SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private static SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss (z)");
 
     public static enum FsContentPropertyType {
 
@@ -229,14 +231,10 @@ public abstract class AbstractFsContentNode<T extends FsContent> extends Abstrac
         dateFormatter.setTimeZone(tz);
         map.put(FsContentPropertyType.NAME.toString(), content.getName());
         map.put(FsContentPropertyType.LOCATION.toString(), DataConversion.getformattedPath(ContentUtils.getDisplayPath(content), 0, 1));
-//        map.put(FsContentPropertyType.MOD_TIME.toString(), content.getMtimeAsDate());
-//        map.put(FsContentPropertyType.CHANGED_TIME.toString(), content.getCtimeAsDate());
-//        map.put(FsContentPropertyType.ACCESS_TIME.toString(), content.getAtimeAsDate());
-//        map.put(FsContentPropertyType.CREATED_TIME.toString(), content.getCrtimeAsDate());
-        map.put(FsContentPropertyType.MOD_TIME.toString(),  dateFormatter.format(new Date(content.getMtime()*1000)));
-        map.put(FsContentPropertyType.CHANGED_TIME.toString(), dateFormatter.format(new Date(content.getCtime()*1000)));
-        map.put(FsContentPropertyType.ACCESS_TIME.toString(), dateFormatter.format(new Date(content.getAtime()*1000)));
-        map.put(FsContentPropertyType.CREATED_TIME.toString(), dateFormatter.format(new Date(content.getCrtime()*1000)));
+        map.put(FsContentPropertyType.MOD_TIME.toString(),  epochToString(content.getMtime()));
+        map.put(FsContentPropertyType.CHANGED_TIME.toString(), epochToString(content.getCtime()));
+        map.put(FsContentPropertyType.ACCESS_TIME.toString(), epochToString(content.getAtime()));
+        map.put(FsContentPropertyType.CREATED_TIME.toString(), epochToString(content.getCrtime()));
         map.put(FsContentPropertyType.SIZE.toString(), content.getSize());
         map.put(FsContentPropertyType.FLAGS_DIR.toString(), content.getDirFlagsAsString());
         map.put(FsContentPropertyType.FLAGS_META.toString(), content.getMetaFlagsAsString());
@@ -250,6 +248,14 @@ public abstract class AbstractFsContentNode<T extends FsContent> extends Abstrac
         map.put(FsContentPropertyType.KNOWN.toString(), content.getKnown().getName());
     }
     
+    private static String epochToString(long epoch) {
+        String time = "0000-00-00 00:00:00 (UTC)";
+        if (epoch != 0) {
+            time = dateFormatter.format(new java.util.Date(epoch * 1000));
+        }
+        return time;
+    }
+
     private static class GetImageVisitor implements ContentVisitor<Image> {
 
         @Override

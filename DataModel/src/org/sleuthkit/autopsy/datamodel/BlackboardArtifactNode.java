@@ -119,10 +119,15 @@ public class BlackboardArtifactNode extends AbstractNode implements DisplayableI
                         map.put(attribute.getAttributeTypeID(), attribute.getValueInt());
                         break;
                     case LONG:
-                        if(attribute.getAttributeTypeID() == ATTRIBUTE_TYPE.TSK_DATETIME.getTypeID() ||
-                                attribute.getAttributeTypeID() == ATTRIBUTE_TYPE.TSK_LAST_ACCESSED.getTypeID()) {
-                            dateFormatter.setTimeZone(getTimeZone(artifact));
-                            map.put(attribute.getAttributeTypeID(), dateFormatter.format(new Date(attribute.getValueLong())));
+                        if (attribute.getAttributeTypeID() == ATTRIBUTE_TYPE.TSK_DATETIME.getTypeID()
+                                || attribute.getAttributeTypeID() == ATTRIBUTE_TYPE.TSK_LAST_ACCESSED.getTypeID()) {
+                            long epoch = attribute.getValueLong();
+                            String time = "0000-00-00 00:00:00";
+                            if (epoch != 0) {
+                                dateFormatter.setTimeZone(getTimeZone(artifact));
+                                time = dateFormatter.format(new java.util.Date(epoch * 1000));
+                            }
+                            map.put(attribute.getAttributeTypeID(), time);
                         } else
                             map.put(attribute.getAttributeTypeID(), attribute.getValueLong());
                         break;

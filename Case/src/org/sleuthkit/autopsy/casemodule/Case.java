@@ -745,8 +745,8 @@ public class Case {
         String second = dfm.format(new GregorianCalendar(2011, 6, 6).getTime()).substring(0, 3); // make it only 3 letters code
         int mid = hour * -1;
         result = first + Integer.toString(mid);
-        //if(min != 0)
-        //    result = result + ":" + Integer.toString(min);
+        if(min != 0)
+            result = result + ":" + Integer.toString(min);
         if (hasDaylight) {
             result = result + second;
         }
